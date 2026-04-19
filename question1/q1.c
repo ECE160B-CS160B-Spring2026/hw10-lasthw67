@@ -1,24 +1,132 @@
 #include <stdio.h>
-#include <string.h>
 #include <ctype.h>
+#include <string.h>
 
 #define MAXWORD 100
-const char *keywords[] = {
-    "auto", "break", "case", "char", "const", "continue", "default",
-    "do", "double", "else", "enum", "extern", "float", "for",
-    "goto", "if", "inline", "int", "long", "register", "restrict",
-    "return", "short", "signed", "sizeof", "static", "struct",
-    "switch", "typedef", "union", "unsigned", "void", "volatile", "while"
+
+struct key {
+    char *word;
+    int count;
 };
 
-#define NKEYS (sizeof(keywords) / sizeof(keywords[0]))
+struct key keytab[] = {
+    {"auto", 0},
+    {"break", 0},
+    {"case", 0},
+    {"char", 0},
+    {"const", 0},
+    {"continue", 0},
+    {"default", 0},
+    {"do", 0},
+    {"double", 0},
+    {"else", 0},
+    {"enum", 0},
+    {"extern", 0},
+    {"float", 0},
+    {"for", 0},
+    {"goto", 0},
+    {"if", 0},
+    {"int", 0},
+    {"long", 0},
+    {"register", 0},
+    {"return", 0},
+    {"short", 0},
+    {"signed", 0},
+    {"sizeof", 0},
+    {"static", 0},
+    {"struct", 0},
+    {"switch", 0},
+    {"typedef", 0},
+    {"union", 0},
+    {"unsigned", 0},
+    {"void", 0},
+    {"volatile", 0},
+    {"while", 0}
+};
 
-int counts[NKEYS] = {0};
-int getword(char *word, int lim) {
+#define NKEYS (sizeof keytab / sizeof keytab[0])
+
+int getword(char *, int);
+struct key *binsearch(char *, struct key *, int);
+int getch(void);
+void ungetch(int);
+
+int main(void)
+{
+    char word[MAXWORD];
+    struct key *p;
+
+    while (getword(word, MAXWORD) != EOF) {
+        if (isalpha(word[0])) {
+            if ((p = binsearch(word, keytab, NKEYS)) != NULL)
+                p->count++;
+        }
+    }
+
+    for (p = keytab; p < keytab + NKEYS; p++) {
+        if (p->count > 0)
+            printf("%4d %s\n", p->count, p->word);
+    }
+
+    return 0;
+}
+
+struct key *binsearch(char *word, struct key *tab, int n)
+{
+    int cond;
+    struct key *low = &tab[0];
+    struct key *high = &tab[n];
+    struct key *mid;
+
+    while (low < high) {
+        mid = low + (high - low) / 2;
+        cond = strcmp(word, mid->word);
+
+        if (cond < 0)
+            high = mid;
+        else if (cond > 0)
+            low = mid + 1;
+        else
+            return mid;
+    }
+    return NULL;
+}
+
+int getword(char *word, int lim)
+{
     int c;
     char *w = word;
-    while (isspace(c = getchar()))
+
+    while (isspace(c = getch()))
         ;
+
+    if (c == '/') {
+        int d = getch();
+        if (d == '/') {
+            while ((c = getch()) != '\n' && c != EOF)
+                ;
+            return getword(word, lim);
+        } else if (d == '*') {
+            int prev = 0;
+            while ((c = getch()) != EOF) {
+                if (prev == '*' && c == '/')
+                    break;
+                prev = c;
+            }
+            return getword(word, lim);
+        } else {
+            ungetch(d);
+        }
+    }
+
+    if (c == '"' || c == '\'') {
+        int quote = c;
+        while ((c = getch()) != quote && c != EOF) {
+            if (c == '\\')
+                getch();
+        }
+        return getword(word, lim);
+    }
 
     if (c != EOF)
         *w++ = c;
@@ -29,48 +137,29 @@ int getword(char *word, int lim) {
     }
 
     for (; --lim > 0; w++) {
-        c = getchar();
-        if (!isalnum(c)) {
-            ungetc(c, stdin);
+        if (!isalnum(*w = getch())) {
+            ungetch(*w);
             break;
         }
-        *w = c;
     }
+
     *w = '\0';
     return word[0];
 }
-int binsearch(char *word, const char *keywords[], int n) {
-    int low = 0, high = n - 1, mid, cond;
 
-    while (low <= high) {
-        mid = (low + high) / 2;
-        cond = strcmp(word, keywords[mid]);
+#define BUFSIZE 100
+char buf[BUFSIZE];
+int bufp = 0;
 
-        if (cond < 0)
-            high = mid - 1;
-        else if (cond > 0)
-            low = mid + 1;
-        else
-            return mid;
-    }
-    return -1;
+int getch(void)
+{
+    return (bufp > 0) ? buf[--bufp] : getchar();
 }
 
-int main() {
-    char word[MAXWORD];
-    int index;
-
-    while (getword(word, MAXWORD) != EOF) {
-        if (isalpha(word[0])) {
-            index = binsearch(word, keywords, NKEYS);
-            if (index >= 0)
-                counts[index]++;
-        }
-    }
-    for (int i = 0; i < NKEYS; i++) {
-        if (counts[i] > 0)
-            printf("%s: %d\n", keywords[i], counts[i]);
-    }
-
-    return 0;
+void ungetch(int c)
+{
+    if (bufp >= BUFSIZE)
+        printf("ungetch: too many characters\n");
+    else
+        buf[bufp++] = c;
 }
