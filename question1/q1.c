@@ -1,15 +1,11 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-
 #define MAXWORD 100
-
 struct key {
     char *word;
     int count;
-};
-
-struct key keytab[] = {
+} keytab[] = {
     {"auto", 0},
     {"break", 0},
     {"case", 0},
@@ -43,46 +39,35 @@ struct key keytab[] = {
     {"volatile", 0},
     {"while", 0}
 };
-
 #define NKEYS (sizeof keytab / sizeof keytab[0])
-
 int getword(char *, int);
 struct key *binsearch(char *, struct key *, int);
 int getch(void);
 void ungetch(int);
-
-int main(void)
+// K&R Pg. 137
+int main()
 {
     char word[MAXWORD];
     struct key *p;
-
-    while (getword(word, MAXWORD) != EOF) {
-        if (isalpha(word[0])) {
-            if ((p = binsearch(word, keytab, NKEYS)) != NULL)
+    while (getword(word, MAXWORD) != EOF)
+        if (isalpha(word[0]))
+            if ((p=binsearch(word, keytab, NKEYS)) != NULL)
                 p->count++;
-        }
-    }
-
-    for (p = keytab; p < keytab + NKEYS; p++) {
+    for (p = keytab; p < keytab + NKEYS; p++)
         if (p->count > 0)
-            printf("%4d %s\n", p->count, p->word);
-    }
-
+            printf("%4d %s\n",
+                p->count, p->word);
     return 0;
 }
-
 struct key *binsearch(char *word, struct key *tab, int n)
 {
     int cond;
     struct key *low = &tab[0];
     struct key *high = &tab[n];
     struct key *mid;
-
     while (low < high) {
-        mid = low + (high - low) / 2;
-        cond = strcmp(word, mid->word);
-
-        if (cond < 0)
+        mid = low + (high-low) / 2;
+        if ((cond = strcmp(word, mid->word)) < 0)
             high = mid;
         else if (cond > 0)
             low = mid + 1;
@@ -91,75 +76,39 @@ struct key *binsearch(char *word, struct key *tab, int n)
     }
     return NULL;
 }
-
 int getword(char *word, int lim)
 {
-    int c;
+    int c, getch(void);
+    void ungetch(int);
     char *w = word;
-
     while (isspace(c = getch()))
         ;
-
-    if (c == '/') {
-        int d = getch();
-        if (d == '/') {
-            while ((c = getch()) != '\n' && c != EOF)
-                ;
-            return getword(word, lim);
-        } else if (d == '*') {
-            int prev = 0;
-            while ((c = getch()) != EOF) {
-                if (prev == '*' && c == '/')
-                    break;
-                prev = c;
-            }
-            return getword(word, lim);
-        } else {
-            ungetch(d);
-        }
-    }
-
-    if (c == '"' || c == '\'') {
-        int quote = c;
-        while ((c = getch()) != quote && c != EOF) {
-            if (c == '\\')
-                getch();
-        }
-        return getword(word, lim);
-    }
-
     if (c != EOF)
         *w++ = c;
-
     if (!isalpha(c)) {
         *w = '\0';
         return c;
     }
-
-    for (; --lim > 0; w++) {
+    for ( ; --lim > 0; w++)
         if (!isalnum(*w = getch())) {
             ungetch(*w);
             break;
         }
-    }
-
     *w = '\0';
     return word[0];
 }
-
+// K&R pg. 79
 #define BUFSIZE 100
 char buf[BUFSIZE];
 int bufp = 0;
-
 int getch(void)
 {
     return (bufp > 0) ? buf[--bufp] : getchar();
 }
-
-void ungetch(int c)
+void ungetch(int c) 
 {
     if (bufp >= BUFSIZE)
-        printf("ungetch: too many characters\n");
+        printf("ungetch: too many caracters\n");
     else
         buf[bufp++] = c;
 }
